@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -164,7 +165,7 @@ fun ListScreen(vm: ListViewModel, back: () -> Unit, openBenefits: () -> Unit, op
     ) { pad ->
         LazyColumn(
             state = lazyState,
-            modifier = Modifier.padding(pad).fillMaxSize().imePadding(),
+            modifier = Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().imePadding(),
             contentPadding = PaddingValues(bottom = 24.dp),
         ) {
             if (!b.wicOn && !b.snapOn && ui.canEditBenefits) item(key = "quick") {

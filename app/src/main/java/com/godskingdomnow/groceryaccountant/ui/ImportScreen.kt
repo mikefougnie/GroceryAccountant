@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -79,7 +80,7 @@ fun ImportScreen(vm: ImportViewModel, back: () -> Unit, openList: (Long) -> Unit
             }
         },
     ) { pad ->
-        LazyColumn(Modifier.padding(pad).fillMaxSize().imePadding(), contentPadding = PaddingValues(bottom = 16.dp)) {
+        LazyColumn(Modifier.padding(pad).consumeWindowInsets(pad).fillMaxSize().imePadding(), contentPadding = PaddingValues(bottom = 16.dp)) {
             item(key = "text") {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
