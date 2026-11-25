@@ -54,7 +54,9 @@ Sign in on the **Account** screen with your Family app username and password.
 - If the same thing was changed on the website since this phone last synced, **the website's version is kept**.
 - WIC and SNAP balances are shared with the family. Only parents can change them; kids see them read-only.
 
-The website needs the **sync update** (`schema_v27.sql` + `app_api.php`). See `INSTALL.txt` in the site zip.
+The website needs the **sync update**: `server/family/grocery_app_api.php` and `server/family/schema_v27.sql` in this repo. See `server/INSTALL.txt`.
+
+The app calls `family/grocery_app_api.php`. Older versions called `family/app_api.php`, a name the Family Manager app also uses. Family Manager's `app_api.php` now passes those older Grocery Accountant requests on to `grocery_app_api.php`, so both apps work side by side. If a site doesn't have `grocery_app_api.php` yet, the app falls back to the old address by itself.
 
 To point the app at a different address, tap "Use a different website address" on the sign-in screen. The default is `https://www.godskingdomnow.com/family/`.
 
@@ -66,4 +68,5 @@ app/src/main/java/com/godskingdomnow/groceryaccountant/
   data/                  Room database, entities, DAO, repository
   sync/                  sign-in storage, website API, sync manager
   ui/                    Compose screens: lists, list, benefits, account
+server/family/           the website side of sync (grocery_app_api.php, schema_v27.sql)
 ```

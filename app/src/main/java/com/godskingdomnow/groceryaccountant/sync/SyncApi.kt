@@ -18,7 +18,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/* Messages exchanged with the family app's app_api.php (see that file for the rules). */
+/* Messages exchanged with the website's family/grocery_app_api.php (see server/family in this repo for the rules). */
 
 @Serializable
 data class UserDto(
@@ -149,13 +149,24 @@ class SyncApi {
         baseUrl: String, action: String, token: String?,
         body: Req, reqSer: KSerializer<Req>, resSer: KSerializer<Res>,
     ): Res = withContext(Dispatchers.IO) {
-        val url = baseUrl.trimEnd('/') + "/app_api.php?action=" + action
-        val b = Request.Builder().url(url).post(json.encodeToString(reqSer, body).toRequestBody(jsonType))
-        if (!token.isNullOrEmpty()) {
-            b.header("Authorization", "Bearer $token")
-            b.header("X-App-Token", token)   // some hosts drop the Authorization header
+        val payload = json.encodeToString(reqSer, body)
+        fun call(file: String): okhttp3.Response {
+            val b = Request.Builder().url(baseUrl.trimEnd('/') + "/" + file + "?action=" + action)
+                .post(payload.toRequestBody(jsonType))
+            if (!token.isNullOrEmpty()) {
+                b.header("Authorization", "Bearer $token")
+                b.header("X-App-Token", token)   // some hosts drop the Authorization header
+            }
+            return client.newCall(b.build()).execute()
         }
-        client.newCall(b.build()).execute().use { resp ->
+        // Grocery Accountant's own file. A website without it yet still answers at the old shared address.
+        var resp = call(if (useOldAddress) OLD_FILE else FILE)
+        if (resp.code == 404 && !useOldAddress) {
+            resp.close()
+            useOldAddress = true
+            resp = call(OLD_FILE)
+        }
+        resp.use { resp ->
             val text = resp.body?.string().orEmpty()
             if (resp.code == 401 && !token.isNullOrEmpty()) {
                 val msg = runCatching { json.decodeFromString(SimpleRes.serializer(), text).error }.getOrNull()
@@ -167,6 +178,14 @@ class SyncApi {
                 throw IOException(if (resp.isSuccessful) "The website sent something unexpected." else "The website answered ${resp.code}.")
             }
         }
+    }
+
+    /** Set once the website turns out not to have [FILE] yet; reset when the app restarts. */
+    @Volatile private var useOldAddress = false
+
+    private companion object {
+        const val FILE = "grocery_app_api.php"
+        const val OLD_FILE = "app_api.php"
     }
 
     suspend fun login(baseUrl: String, username: String, password: String, device: String): LoginRes =

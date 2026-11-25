@@ -1,0 +1,19 @@
+Grocery Accountant: website update
+==================================
+
+1. Upload family/grocery_app_api.php into the site's "family" folder
+   (on both godskingdomnow.com and golgothabridge.com if you use both).
+2. Upload the newest family/app_api.php from the family-manager repo
+   (server/app_api.php) too. It's Family Manager's file, and it passes
+   requests from older Grocery Accountant versions on to
+   grocery_app_api.php, so both apps work with one app_api.php.
+3. Only if you haven't before: in phpMyAdmin, import family/schema_v27.sql.
+   If you haven't imported schema_v24, v25 and v26 yet, import those first, in order.
+   This needs MySQL 5.6.5 or newer.
+
+Nothing changes on the website for people who don't use the app.
+Each phone gets its own sign-in key. Signing out in the app cancels that key.
+
+Also fixed in this version: a store typed on the phone is now kept with
+your family (like stores added on the website), instead of being matched
+to another family's store with the same name.
