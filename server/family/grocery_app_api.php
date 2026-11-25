@@ -33,6 +33,63 @@ require_once __DIR__ . '/lib.php';
 
 header('Cache-Control: no-store');
 $action = isset($_GET['action']) ? (string) $_GET['action'] : '';
+
+/* Never answer with a bare 500: the phone shows "The website answered 500" and nobody
+   can tell why. Errors go to the server's error log, and the phone gets a short reason. */
+function app_fail($why)
+{
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(array('ok' => false, 'error' => 'Website error: ' . $why));
+    exit;
+}
+set_exception_handler(function ($e) {
+    error_log('grocery_app_api: ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    $msg = $e->getMessage();
+    if (preg_match("/Table '[^']*\\.([a-z_]+)' doesn't exist/i", $msg, $m)) {
+        app_fail('the database table ' . $m[1] . ' is missing. Import the newest schema files in phpMyAdmin.');
+    }
+    if (preg_match("/Unknown column '([^']+)'/i", $msg, $m)) {
+        app_fail('the database column ' . $m[1] . ' is missing. Import the newest schema files in phpMyAdmin.');
+    }
+    app_fail('something went wrong on the server. Details are in the website’s error log.');
+});
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR), true)) {
+        error_log('grocery_app_api fatal: ' . $err['message'] . ' @ ' . $err['file'] . ':' . $err['line']);
+        app_fail(mb_substr(preg_replace('/ in \/.*$/s', '', $err['message']), 0, 160));
+    }
+});
+
+/* Create what the app needs if schema_v27 was never imported (or its import failed),
+   the same way Family Manager sets up its own table. Safe to run every time. */
+function app_setup($withSyncColumns)
+{
+    db()->exec('CREATE TABLE IF NOT EXISTS family_app_tokens (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        user_id       INT          NOT NULL,
+        token_hash    CHAR(64)     NOT NULL,
+        device        VARCHAR(80)  NULL,
+        created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_used_at  TIMESTAMP    NULL,
+        UNIQUE KEY uq_token (token_hash),
+        KEY idx_user (user_id)
+    ) ENGINE=InnoDB');
+    if (!$withSyncColumns) { return; }
+    foreach (array('family_shopping_lists', 'family_shopping_items') as $t) {
+        $st = db()->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS
+                              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'updated_at'");
+        $st->execute(array($t));
+        if ((int) $st->fetchColumn() === 0) {
+            db()->exec("ALTER TABLE $t ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        }
+    }
+}
+if ($action === 'login') { app_setup(false); }
+if ($action === 'sync')  { app_setup(true); }
 $in = json_decode((string) file_get_contents('php://input'), true);
 if (!is_array($in)) { $in = array(); }
 

@@ -9,6 +9,7 @@
 --    the website changed something after the phone last synced (the
 --    website's version wins in that case).
 --
+--  grocery_app_api.php now also creates these by itself on first use.
 --  Import via phpMyAdmin (database mikfou9_ei) after schema_v26.
 --  Needs MySQL 5.6.5+ / MariaDB 10+ (two auto-updating timestamps).
 --  "duplicate column" errors on re-run are safe to ignore.
@@ -22,8 +23,7 @@ CREATE TABLE IF NOT EXISTS family_app_tokens (
   created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_used_at  TIMESTAMP    NULL,
   UNIQUE KEY uq_token (token_hash),
-  KEY idx_user (user_id),
-  CONSTRAINT fk_apptok_user FOREIGN KEY (user_id) REFERENCES family_users(id) ON DELETE CASCADE
+  KEY idx_user (user_id)
 ) ENGINE=InnoDB;
 
 ALTER TABLE family_shopping_lists ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
