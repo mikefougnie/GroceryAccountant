@@ -21,6 +21,8 @@ class AppContainer(app: Application) {
     val sessions = SessionStore(app)
     val sync = SyncManager(db, SyncApi(), sessions, scope)
     val repo = Repository(db) { sync.requestSoon() }
+    /** Text shared into the app (e.g. a text message) waiting to be imported. */
+    val pendingImport = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 }
 
 class GroceryApp : Application() {

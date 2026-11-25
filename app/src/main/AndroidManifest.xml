@@ -4,6 +4,14 @@
     <!-- Only used when you choose to sign in and sync with the family app. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- So "Find at Walmart / Kroger" can open the store app or browser on Android 11+ -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".GroceryApp"
         android:allowBackup="true"
@@ -17,11 +25,18 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.GroceryAccountant">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Share a text message (or any text) into Grocery Accountant to import it as items -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
     </application>

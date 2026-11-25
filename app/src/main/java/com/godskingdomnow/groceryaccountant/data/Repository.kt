@@ -82,6 +82,20 @@ class Repository(private val db: AppDatabase, private val onChanged: () -> Unit)
         return id
     }
 
+    /** Add several items at once (text-message import). Returns how many were added. */
+    suspend fun addParsed(listId: Long, items: List<ImportParser.Parsed>): Int {
+        if (items.isEmpty()) return 0
+        db.withTransaction {
+            var sort = dao.maxItemSort(listId)
+            items.forEach { p ->
+                dao.insertItem(ItemEntity(listId = listId, name = p.name, qty = p.qty, size = p.size,
+                    priceCents = p.priceCents, sortOrder = ++sort))
+            }
+        }
+        onChanged()
+        return items.size
+    }
+
     suspend fun editItem(id: Long, change: (ItemEntity) -> ItemEntity) {
         val i = dao.getItem(id) ?: return
         val updated = change(i)

@@ -5,17 +5,27 @@ import androidx.lifecycle.viewModelScope
 import com.godskingdomnow.groceryaccountant.AppContainer
 import com.godskingdomnow.groceryaccountant.calc.ShopEngine
 import com.godskingdomnow.groceryaccountant.data.BenefitsEntity
+import com.godskingdomnow.groceryaccountant.data.ImportParser
 import com.godskingdomnow.groceryaccountant.data.ItemEntity
 import com.godskingdomnow.groceryaccountant.data.ShopListEntity
 import com.godskingdomnow.groceryaccountant.data.settingsFor
 import com.godskingdomnow.groceryaccountant.data.toEngine
 import com.godskingdomnow.groceryaccountant.sync.Session
 import com.godskingdomnow.groceryaccountant.sync.SyncManager
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /* ======================= home: all lists ======================= */
 
@@ -126,5 +136,72 @@ class AccountViewModel(private val c: AppContainer) : ViewModel() {
     fun signOut(keepFamilyLists: Boolean) = viewModelScope.launch {
         c.sync.signOut()
         c.repo.forgetFamily(keepFamilyLists)
+    }
+}
+
+/* ======================= import from a text message ======================= */
+
+data class ImportRow(val p: ImportParser.Parsed, val selected: Boolean, val onList: Boolean)
+
+data class ImportUi(
+    val text: String = "",
+    val rows: List<ImportRow> = emptyList(),
+    val lists: List<ShopListEntity> = emptyList(),
+    /** null = make a new list */
+    val targetId: Long? = null,
+    val newName: String = "",
+    val session: Session = Session(),
+) {
+    val count get() = rows.count { it.selected }
+}
+
+class ImportViewModel(private val c: AppContainer, startList: Long?) : ViewModel() {
+    private val text = MutableStateFlow("")
+    private val target = MutableStateFlow(startList)
+    private val newName = MutableStateFlow("From text " + SimpleDateFormat("MMM d", Locale.US).format(Date()))
+    /** index -> ticked/unticked by hand (cleared when the text changes) */
+    private val overrides = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+
+    init {
+        // take shared text now, and any more that is shared while this screen is open
+        viewModelScope.launch {
+            c.pendingImport.filterNotNull().collect { setText(it); c.pendingImport.value = null }
+        }
+    }
+
+    private val parsed = text.map { ImportParser.parse(it) }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val targetItems = target.flatMapLatest { id -> if (id == null) flowOf(emptyList()) else c.repo.items(id) }
+
+    val ui: StateFlow<ImportUi> = combine(
+        combine(text, parsed, overrides) { a, b, c2 -> Triple(a, b, c2) },
+        combine(target, newName, targetItems) { a, b, c2 -> Triple(a, b, c2) },
+        c.repo.lists, c.sessions.session,
+    ) { (t, ps, ov), (tid, name, existing), lists, session ->
+        val have = existing.filter { !it.checked }.map { it.name.lowercase() }.toSet()
+        ImportUi(
+            text = t,
+            rows = ps.mapIndexed { i, p ->
+                val dup = p.name.lowercase() in have
+                ImportRow(p, ov[i] ?: (p.likely && !dup), dup)
+            },
+            lists = lists, targetId = tid?.takeIf { id -> lists.any { it.id == id } }, newName = name, session = session,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ImportUi(targetId = startList))
+
+    fun setText(t: String) { text.value = t; overrides.value = emptyMap() }
+    fun toggle(i: Int) { val cur = ui.value.rows.getOrNull(i) ?: return; overrides.value = overrides.value + (i to !cur.selected) }
+    fun setTarget(id: Long?) { target.value = id }
+    fun setNewName(n: String) { newName.value = n }
+
+    /** Adds the ticked items; calls back with the list they went to. */
+    fun import(share: Boolean, then: (Long) -> Unit) = viewModelScope.launch {
+        val u = ui.value
+        val picked = u.rows.filter { it.selected }.map { it.p }
+        if (picked.isEmpty()) return@launch
+        val id = u.targetId ?: c.repo.createList(u.newName, "", share)
+        c.repo.addParsed(id, picked)
+        then(id)
     }
 }

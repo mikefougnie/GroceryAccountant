@@ -31,6 +31,19 @@ All money is worked in cents. At the register, things are applied in this order:
 
 **Done shopping** takes what the checked items used off your balances and removes those items.
 
+## Import from a text message
+
+- In **Messages**, long-press the text (for example, your wife's list), then tap **Share → Grocery Accountant**. Or copy the text and use the 💬 button on the home screen, or **Add from a text message…** in a list's menu.
+- The app finds the items in casual texts ("Can you grab milk, 2 dozen eggs and bread? Thanks!"), lists with one item per line, bullets and checkboxes, numbered lists, and lists copied from store apps with prices.
+- It picks up quantities (`2 milk`, `bananas x2`, `(3)`), sizes (`2 lb`, `1 gallon`, `3 cans`) and prices (`$3.48`). It leaves out chat like "ok" and "love you", and shows sentences that don't look like items unticked.
+- Before adding, you tick or untick each item and choose a new or existing list. Items already on that list are marked so you don't add them twice.
+- The app can't read your texts by itself: only default messaging apps are allowed to, so you choose what to share.
+
+## Send and shop
+
+- **Send list as text…** (list menu) shares what's still left to get, with quantities, prices and the estimated total, by text, email or notes.
+- **Find it online → Walmart / Kroger** (item details) searches that store for the item, in the store's app if it's installed.
+
 ## Family sync (optional)
 
 Sign in on the **Account** screen with your Family app username and password.

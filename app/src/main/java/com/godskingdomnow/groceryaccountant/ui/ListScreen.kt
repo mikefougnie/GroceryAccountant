@@ -2,6 +2,10 @@
 
 package com.godskingdomnow.groceryaccountant.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -79,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.godskingdomnow.groceryaccountant.calc.ShopEngine
 import com.godskingdomnow.groceryaccountant.data.BenefitsEntity
+import com.godskingdomnow.groceryaccountant.data.ImportParser
 import com.godskingdomnow.groceryaccountant.data.ItemEntity
 import com.godskingdomnow.groceryaccountant.data.foodInfo
 import com.godskingdomnow.groceryaccountant.data.money
@@ -89,7 +95,8 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
-fun ListScreen(vm: ListViewModel, back: () -> Unit, openBenefits: () -> Unit) {
+fun ListScreen(vm: ListViewModel, back: () -> Unit, openBenefits: () -> Unit, openImport: () -> Unit) {
+    val context = LocalContext.current
     val ui by vm.ui.collectAsStateWithLifecycle()
     val list = ui.list
     if (ui.loaded && list == null) { LaunchedEffect(Unit) { back() }; return }
@@ -130,6 +137,13 @@ fun ListScreen(vm: ListViewModel, back: () -> Unit, openBenefits: () -> Unit) {
                     Box {
                         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "List options") }
                         DropdownMenu(menu, { menu = false }) {
+                            DropdownMenuItem({ Text("Add from a text message…") }, { menu = false; openImport() })
+                            DropdownMenuItem({ Text("Send list as text…") }, {
+                                menu = false
+                                val l = ui.list
+                                if (l != null) shareText(context, l.name,
+                                    ImportParser.export(l.name, ui.items, includeChecked = false, youPay = ui.result?.totals?.you?.let { money(it) }))
+                            })
                             DropdownMenuItem({ Text("Edit list (name, store, tax)") }, { menu = false; editing = true })
                             if ((b.wicOn || b.snapOn) && checkedCount > 0 && ui.canEditBenefits)
                                 DropdownMenuItem({ Text("Done shopping — update balances") }, { menu = false; finishing = true })
@@ -317,6 +331,7 @@ private fun ItemSheet(
     onMove: (Long) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit,
 ) {
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp).imePadding(),
@@ -399,6 +414,11 @@ private fun ItemSheet(
                 }
             }
 
+            Text("Find it online", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { openUrl(context, ImportParser.walmartSearch(item.name)) }) { Text("Walmart") }
+                OutlinedButton(onClick = { openUrl(context, ImportParser.krogerSearch(item.name)) }) { Text("Kroger") }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (otherLists.isNotEmpty()) {
                     var moveOpen by remember { mutableStateOf(false) }
@@ -495,4 +515,20 @@ private fun EditListDialog(name: String, store: String, rate: Double, onDismiss:
         confirmButton = { TextButton({ onSave(n.trim(), s.trim(), (parseNumber(r) ?: 0.0).coerceIn(0.0, 100.0)) }) { Text("Save") } },
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
     )
+}
+
+/* ---------------- sharing out ---------------- */
+
+fun shareText(context: Context, subject: String, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(send, "Send list"))
+}
+
+/** Opens the store's app if installed (Android hands its links to it), otherwise the browser. */
+fun openUrl(context: Context, url: String) {
+    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
 }

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.ShoppingBasket
+import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -56,6 +57,7 @@ fun ListsScreen(
     openList: (Long) -> Unit,
     openBenefits: () -> Unit,
     openAccount: () -> Unit,
+    openImport: () -> Unit,
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf(false) }
@@ -65,6 +67,7 @@ fun ListsScreen(
             TopAppBar(
                 title = { Text("Grocery Accountant") },
                 actions = {
+                    IconButton(onClick = openImport) { Icon(Icons.Outlined.Sms, "Add from a text message") }
                     IconButton(onClick = openBenefits) { Icon(Icons.Outlined.Savings, "WIC, SNAP and coupons") }
                     IconButton(onClick = openAccount) { Icon(Icons.Outlined.AccountCircle, "Family sign-in and sync") }
                 },
@@ -78,7 +81,7 @@ fun ListsScreen(
             if (ui.syncing) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (ui.session.signedIn || ui.session.lastError.isNotEmpty()) SyncLine(ui, openAccount)
             if (ui.loaded && ui.cards.isEmpty()) {
-                EmptyLists { creating = true }
+                EmptyLists(onNew = { creating = true }, onImport = openImport)
             } else {
                 LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(ui.cards, key = { it.list.id }) { card -> ListCardView(card) { openList(card.list.id) } }
@@ -149,7 +152,7 @@ private fun ListCardView(card: ListCard, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EmptyLists(onNew: () -> Unit) {
+private fun EmptyLists(onNew: () -> Unit, onImport: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         Icon(Icons.Outlined.ShoppingBasket, null, Modifier.size(64.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(12.dp))
@@ -161,6 +164,7 @@ private fun EmptyLists(onNew: () -> Unit) {
         )
         Spacer(Modifier.height(16.dp))
         TextButton(onClick = onNew) { Text("Make your first list") }
+        TextButton(onClick = onImport) { Text("Or add one from a text message") }
     }
 }
 
