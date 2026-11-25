@@ -63,6 +63,13 @@ fun AccountScreen(vm: AccountViewModel, back: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (ui.session.signedIn) SignedIn(ui, vm) else SignInForm(ui.session, vm)
+            if (Support.enabled) {
+                var coffee by remember { mutableStateOf(false) }
+                CoffeeButton(onClick = { coffee = true }, modifier = Modifier.padding(top = 12.dp))
+                Text("Grocery Accountant is free with no ads. Coffee keeps it that way. Thank you!",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (coffee) CoffeeDialog(COFFEE_MESSAGE, fromMenu = true, onDismiss = { coffee = false })
+            }
         }
     }
 }

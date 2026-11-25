@@ -17,6 +17,9 @@ android {
         // GitHub's build number makes every download a newer version
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+        // "Buy me a coffee" links; leave blank in gradle.properties to hide them.
+        buildConfigField("String", "SUPPORT_PAYPAL", "\"${project.findProperty("supportPaypal") ?: ""}\"")
+        buildConfigField("String", "SUPPORT_VENMO", "\"${project.findProperty("supportVenmo") ?: ""}\"")
     }
 
     // One fixed key for the APKs GitHub builds, so each new download installs over the old one
@@ -49,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

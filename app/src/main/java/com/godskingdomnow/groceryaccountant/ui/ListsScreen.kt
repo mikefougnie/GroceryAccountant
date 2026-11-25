@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CloudDone
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.ShoppingBasket
 import androidx.compose.material.icons.outlined.Sms
@@ -61,6 +62,7 @@ fun ListsScreen(
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var creating by remember { mutableStateOf(false) }
+    var coffee by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -70,6 +72,7 @@ fun ListsScreen(
                     IconButton(onClick = openImport) { Icon(Icons.Outlined.Sms, "Add from a text message") }
                     IconButton(onClick = openBenefits) { Icon(Icons.Outlined.Savings, "WIC, SNAP and coupons") }
                     IconButton(onClick = openAccount) { Icon(Icons.Outlined.AccountCircle, "Family sign-in and sync") }
+                    if (Support.enabled) IconButton(onClick = { coffee = true }) { Icon(Icons.Outlined.LocalCafe, "Buy me a coffee", tint = CoffeeYellow) }
                 },
             )
         },
@@ -89,6 +92,9 @@ fun ListsScreen(
             }
         }
     }
+
+    if (coffee) CoffeeDialog(COFFEE_MESSAGE, fromMenu = true, onDismiss = { coffee = false })
+    CoffeePrompt(COFFEE_MESSAGE) { !creating && !coffee }
 
     if (creating) {
         NewListDialog(
