@@ -14,11 +14,26 @@ android {
         applicationId = "com.godskingdomnow.groceryaccountant"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // GitHub's build number makes every download a newer version
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        versionName = "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
+    }
+
+    // One fixed key for the APKs GitHub builds, so each new download installs over the old one
+    // (keeps your lists). For the Play Store, use your own private upload key instead.
+    signingConfigs {
+        create("sideload") {
+            storeFile = file("signing/sideload.jks")
+            storePassword = "groceryaccountant"
+            keyAlias = "groceryaccountant"
+            keyPassword = "groceryaccountant"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("sideload")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
